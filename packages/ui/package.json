@@ -1,5 +1,6 @@
 {
 	"name": "@tm9657/flow-like-ui",
+	"version": "0.0.1",
 	"type": "module",
 	"dependencies": {
 		"@ai-sdk/react": "^1.2.12",
