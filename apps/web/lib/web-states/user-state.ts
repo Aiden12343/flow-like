@@ -30,6 +30,7 @@ import {
 	apiGet,
 	apiPost,
 	apiPut,
+	getApiBaseUrl,
 } from "./api-utils";
 
 // API returns snake_case fields, frontend expects camelCase
@@ -218,8 +219,7 @@ export class WebUserState implements IUserState {
 		}
 
 		// No profiles exist - create a default one using upsert endpoint
-		const hubUrl =
-			process.env.NEXT_PUBLIC_API_URL || "https://api.flow-like.com";
+		const hubUrl = getApiBaseUrl();
 		const newProfileId = createId();
 
 		const newApiProfile = await apiPost<ApiProfile>(
