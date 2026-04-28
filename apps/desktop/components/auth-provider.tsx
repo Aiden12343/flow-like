@@ -4,6 +4,7 @@ import { getCurrent } from "@tauri-apps/plugin-deep-link";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
 	useBackend,
+	useBackendStore,
 	useInvalidateInfiniteInvoke,
 	useInvalidateInvoke,
 	useInvoke,
@@ -19,6 +20,7 @@ import {
 	type INavigator,
 	type IWindow,
 	type NavigateParams,
+	User,
 	UserManager,
 	type UserManagerSettings,
 	WebStorageStateStore,
@@ -29,6 +31,34 @@ import { get } from "../lib/api";
 import { ProfileSyncer, TauriBackend } from "./tauri-provider";
 
 const AUTH_CHANGED_EVENT = "fl-auth-changed";
+const EMBED_SURFACE_ID = "bulltrackers-task-builder";
+const AUTH_REQUEST_TIMEOUT_MS = 15_000;
+
+type HostAuthPayload = {
+	token: string;
+	v4Base: string;
+	apiBase?: string;
+	apiBaseMain?: string;
+	apiBaseTask?: string;
+	hostOrigin?: string;
+};
+
+type SessionExchangeData = {
+	accessToken: string;
+	refreshToken: string;
+	accessExpiresAt: string;
+	refreshExpiresAt: string;
+	identity?: {
+		firebaseUid?: string;
+		email?: string | null;
+	};
+};
+
+type SessionEnvelope = {
+	success?: boolean;
+	error?: string;
+	data?: SessionExchangeData;
+};
 
 function emitAuthChanged() {
 	window.dispatchEvent(new CustomEvent(AUTH_CHANGED_EVENT));
@@ -83,6 +113,119 @@ class TauriRedirectNavigator implements INavigator {
 	}
 }
 
+function isEmbeddedBulltrackersSurface(): boolean {
+	if (typeof window === "undefined") return false;
+	const params = new URLSearchParams(window.location.search);
+	return params.get("surface") === EMBED_SURFACE_ID && window.parent !== window;
+}
+
+function getExpectedHostOrigin(): string | null {
+	if (typeof window === "undefined") return null;
+	const params = new URLSearchParams(window.location.search);
+	const fromQuery = params.get("hostOrigin");
+	if (fromQuery) {
+		try {
+			return new URL(fromQuery).origin;
+		} catch {
+			return null;
+		}
+	}
+	if (document.referrer) {
+		try {
+			return new URL(document.referrer).origin;
+		} catch {
+			return null;
+		}
+	}
+	return null;
+}
+
+async function requestHostAuth(expectedOrigin: string): Promise<HostAuthPayload> {
+	return new Promise<HostAuthPayload>((resolve, reject) => {
+		const timeout = window.setTimeout(() => {
+			window.removeEventListener("message", onMessage);
+			reject(new Error("Timed out waiting for host auth response"));
+		}, AUTH_REQUEST_TIMEOUT_MS);
+
+		const onMessage = (event: MessageEvent) => {
+			if (event.origin !== expectedOrigin) return;
+			if (event.data?.type !== "AUTH_READY" || !event.data?.payload) return;
+
+			const payload = event.data.payload as HostAuthPayload;
+			if (!payload.token || !payload.v4Base) return;
+
+			window.clearTimeout(timeout);
+			window.removeEventListener("message", onMessage);
+			resolve(payload);
+		};
+
+		window.addEventListener("message", onMessage);
+		window.parent.postMessage({ type: "REQUEST_AUTH" }, expectedOrigin);
+	});
+}
+
+async function exchangeSessionWithV4(
+	v4Base: string,
+	firebaseIdToken: string,
+): Promise<SessionExchangeData> {
+	const response = await fetch(`${v4Base}/auth/session`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({ firebaseIdToken }),
+	});
+
+	const envelope = (await response.json().catch(() => ({}))) as SessionEnvelope;
+	if (!response.ok || !envelope.success || !envelope.data) {
+		throw new Error(envelope.error || `Session exchange failed (${response.status})`);
+	}
+
+	return envelope.data;
+}
+
+async function refreshSessionWithV4(
+	v4Base: string,
+	refreshToken: string,
+): Promise<SessionExchangeData> {
+	const response = await fetch(`${v4Base}/auth/refresh`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({ refreshToken }),
+	});
+
+	const envelope = (await response.json().catch(() => ({}))) as SessionEnvelope;
+	if (!response.ok || !envelope.success || !envelope.data) {
+		throw new Error(envelope.error || `Session refresh failed (${response.status})`);
+	}
+
+	return envelope.data;
+}
+
+async function storeEmbeddedUser(
+	userManager: UserManager,
+	session: SessionExchangeData,
+) {
+	const expiresAtEpoch = Math.floor(new Date(session.accessExpiresAt).getTime() / 1000);
+	const user = new User({
+		access_token: session.accessToken,
+		refresh_token: session.refreshToken,
+		// Never persist the host Firebase token. We use the v4 session token as id_token placeholder.
+		id_token: session.accessToken,
+		token_type: "Bearer",
+		scope: "openid profile email",
+		expires_at: Number.isFinite(expiresAtEpoch) ? expiresAtEpoch : undefined,
+		profile: {
+			sub: session.identity?.firebaseUid || "embedded-user",
+			email: session.identity?.email || undefined,
+		} as any,
+	});
+	await userManager.storeUser(user);
+	emitAuthChanged();
+}
+
 export function DesktopAuthProvider({
 	children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -90,16 +233,131 @@ export function DesktopAuthProvider({
 		useState<UserManagerSettings>();
 	const [userManager, setUserManager] = useState<UserManager>();
 	const backend = useBackend();
+	const backendInStore = useBackendStore((state) => state.backend);
+	const embeddedMode =
+		typeof window !== "undefined" && isEmbeddedBulltrackersSurface();
+	const shouldLoadProfile = Boolean(backendInStore) && !embeddedMode;
 	const currentProfile = useInvoke(
-		backend.userState.getProfile,
-		backend.userState,
+		async () => {
+			if (!backendInStore) {
+				throw new Error("Backend not ready");
+			}
+			return backendInStore.userState.getProfile();
+		},
+		null,
 		[],
+		shouldLoadProfile,
 	);
 
 	const hubUrl = currentProfile.data?.hub ?? "api.flow-like.com";
 	const hubSecure = currentProfile.data?.secure ?? true;
 
 	useEffect(() => {
+		if (isEmbeddedBulltrackersSurface()) {
+			let disposed = false;
+			const expectedHostOrigin = getExpectedHostOrigin();
+			if (!expectedHostOrigin) {
+				console.error("[DesktopAuthProvider] Missing or invalid hostOrigin in embedded mode.");
+				return;
+			}
+
+			const store = new WebStorageStateStore({
+				store: sessionStorage,
+			});
+
+			const embeddedConfig: UserManagerSettings = {
+				authority: expectedHostOrigin,
+				client_id: "bulltrackers-embedded-shell",
+				redirect_uri: `${window.location.origin}${window.location.pathname}`,
+				post_logout_redirect_uri: `${window.location.origin}${window.location.pathname}`,
+				response_type: "code",
+				scope: "openid profile email",
+				userStore: store,
+				automaticSilentRenew: false,
+				loadUserInfo: false,
+				monitorSession: false,
+				revokeTokensOnSignout: false,
+			};
+			const userManagerInstance = new UserManager(embeddedConfig);
+			(embeddedConfig as any).userManager = userManagerInstance;
+
+			let refreshTimer: ReturnType<typeof setInterval> | null = null;
+			let currentV4Base = "";
+			let currentRefreshToken = "";
+			let currentIdentity: SessionExchangeData["identity"] | undefined;
+
+			const refreshIfNeeded = async () => {
+				if (!currentRefreshToken || !currentV4Base) return;
+				const user = await userManagerInstance.getUser();
+				if (!user?.expires_at) return;
+				const expiresInMs = user.expires_at * 1000 - Date.now();
+				if (expiresInMs > 60_000) return;
+
+				const refreshed = await refreshSessionWithV4(currentV4Base, currentRefreshToken);
+				currentRefreshToken = refreshed.refreshToken;
+				currentIdentity = refreshed.identity || currentIdentity;
+				await storeEmbeddedUser(userManagerInstance, {
+					...refreshed,
+					identity: currentIdentity,
+				});
+			};
+
+			const bootstrapEmbedded = async () => {
+				try {
+					const payload = await requestHostAuth(expectedHostOrigin);
+					if (disposed) return;
+
+					currentV4Base = payload.v4Base;
+					if (typeof window !== "undefined") {
+						const apiBaseMain = payload.apiBaseMain ?? payload.apiBase;
+						const apiBaseTask = payload.apiBaseTask ?? payload.v4Base;
+						if (apiBaseMain) {
+							(window as any).__FLOW_LIKE_API_BASE_MAIN__ = apiBaseMain;
+						}
+						if (apiBaseTask) {
+							(window as any).__FLOW_LIKE_API_BASE_TASK__ = apiBaseTask;
+						}
+						if (apiBaseMain || apiBaseTask || payload.apiBase) {
+							// Backward compatible fallback for older consumers.
+							(window as any).__FLOW_LIKE_API_BASE__ =
+								apiBaseTask ?? apiBaseMain ?? payload.apiBase;
+						}
+					}
+					const session = await exchangeSessionWithV4(payload.v4Base, payload.token);
+					if (disposed) return;
+
+					currentRefreshToken = session.refreshToken;
+					currentIdentity = session.identity;
+					await storeEmbeddedUser(userManagerInstance, session);
+
+					setUserManager(userManagerInstance);
+					setOpenIdAuthConfig(embeddedConfig);
+
+					refreshTimer = window.setInterval(() => {
+						void refreshIfNeeded().catch(async (error) => {
+							console.warn("[DesktopAuthProvider] Embedded session refresh failed:", error);
+							try {
+								await bootstrapEmbedded();
+							} catch (bootstrapError) {
+								console.error("[DesktopAuthProvider] Embedded auth re-bootstrap failed:", bootstrapError);
+							}
+						});
+					}, 30_000);
+				} catch (error) {
+					console.error("[DesktopAuthProvider] Embedded auth bootstrap failed:", error);
+				}
+			};
+
+			void bootstrapEmbedded();
+
+			return () => {
+				disposed = true;
+				if (refreshTimer) {
+					window.clearInterval(refreshTimer);
+				}
+			};
+		}
+
 		const effectiveProfile = {
 			hub: hubUrl,
 			secure: hubSecure,
@@ -157,6 +415,7 @@ export function DesktopAuthProvider({
 
 	useEffect(() => {
 		if (!openIdAuthConfig) return;
+		if (isEmbeddedBulltrackersSurface()) return;
 		const seenUrls = new Set<string>();
 
 		const normalizeTo = (target: string, source: string) => {
@@ -322,12 +581,6 @@ export function DesktopAuthProvider({
 			<AuthProvider
 				key={openIdAuthConfig.client_id}
 				{...openIdAuthConfig}
-				automaticSilentRenew={true}
-				userStore={
-					new WebStorageStateStore({
-						store: localStorage,
-					})
-				}
 			>
 				<AuthInner>{children}</AuthInner>
 			</AuthProvider>
@@ -384,13 +637,36 @@ function AuthInner({ children }: Readonly<{ children: React.ReactNode }>) {
 			return;
 		}
 
-		if (backend instanceof TauriBackend) {
+		if (
+			backend &&
+			typeof (backend as any).pushAuthContext === "function"
+		) {
 			console.log("Pushing auth context to backend:", auth);
-			backend.pushAuthContext(auth);
+			(backend as any).pushAuthContext(auth);
 		}
 	}, [auth?.isAuthenticated, auth?.user?.id_token, backend]);
 
 	useEffect(() => {
+		if (!auth?.isAuthenticated || !backend) return;
+		if (backend instanceof TauriBackend) return;
+		if (typeof (backend as any).pushProfile !== "function") return;
+
+		(async () => {
+			try {
+				const profile = await backend.userState.getProfile();
+				if (profile) {
+					(backend as any).pushProfile(profile);
+				}
+			} catch (error) {
+				console.warn("[AuthInner] Failed to push profile to backend:", error);
+			}
+		})();
+	}, [auth?.isAuthenticated, auth?.user?.profile?.sub, backend]);
+
+	useEffect(() => {
+		if (isEmbeddedBulltrackersSurface()) {
+			return;
+		}
 		if (!auth) return;
 
 		(async () => {
@@ -459,12 +735,14 @@ function AuthInner({ children }: Readonly<{ children: React.ReactNode }>) {
 
 	return (
 		<>
-			<ProfileSyncer
-				auth={{
-					isAuthenticated: auth.isAuthenticated,
-					accessToken: auth.user?.access_token,
-				}}
-			/>
+			{backend instanceof TauriBackend && (
+				<ProfileSyncer
+					auth={{
+						isAuthenticated: auth.isAuthenticated,
+						accessToken: auth.user?.access_token,
+					}}
+				/>
+			)}
 			{children}
 		</>
 	);

@@ -18,6 +18,7 @@ import { codeToHtml } from "shiki";
 import { toast } from "sonner";
 
 import { useInvoke } from "../../../hooks/use-invoke";
+import { tauriFetch } from "../../../lib/tauri";
 import { useBackend } from "../../../state/backend-state";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
@@ -423,9 +424,6 @@ export function EndpointsPage() {
 			setError(null);
 			let res: Response;
 			try {
-				const { fetch: tauriFetch } = await import(
-					"@tauri-apps/plugin-http"
-				);
 				res = await tauriFetch(openApiUrl);
 			} catch {
 				res = await fetch(openApiUrl);

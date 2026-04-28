@@ -8,13 +8,13 @@ import { useInvoke } from "../../hooks/use-invoke";
 import type { IApp } from "../../lib/schema/app/app";
 import { IAppVisibility } from "../../lib/schema/app/app";
 import type { IMetadata } from "../../lib/schema/bit/bit-pack";
+import { tauriOpenUrl } from "../../lib/tauri";
 import { useBackend } from "../../state/backend-state";
 import type { IEventMapping } from "../interfaces/interfaces";
 
 async function openCheckoutUrl(url: string) {
 	if (typeof window !== "undefined" && "__TAURI__" in window) {
-		const { openUrl } = await import("@tauri-apps/plugin-opener");
-		await openUrl(url);
+		await tauriOpenUrl(url);
 		toast.info("Opening checkout in your browser...");
 	} else {
 		window.open(url, "_blank");

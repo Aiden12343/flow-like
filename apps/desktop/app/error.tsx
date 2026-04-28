@@ -1,6 +1,6 @@
 "use client";
 
-import * as Sentry from "@sentry/nextjs";
+import { captureClientException } from "../lib/sentry-client";
 import { AlertTriangle, ArrowLeft, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -15,7 +15,7 @@ export default function Error({
 	const router = useRouter();
 
 	useEffect(() => {
-		Sentry.captureException(error);
+		void captureClientException(error);
 	}, [error]);
 
 	return (

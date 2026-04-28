@@ -1,9 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import "@tm9657/flow-like-ui/global.css";
-import { Inter } from "next/font/google";
+import "./globals.css";
 import { ClientProviders } from "../components/client-providers";
-
-const inter = Inter({ subsets: ["latin"], preload: true });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://app.flow-like.com";
 
@@ -91,7 +88,7 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en" suppressHydrationWarning suppressContentEditableWarning>
-			<body className={inter.className}>
+			<body className="font-sans">
 				<ClientProviders>{children}</ClientProviders>
 			</body>
 		</html>

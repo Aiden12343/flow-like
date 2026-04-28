@@ -4,6 +4,7 @@ import { ExternalLink, Play } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isTauri } from "../../../lib/platform";
+import { tauriFetch } from "../../../lib/tauri";
 import { cn } from "../../../lib/utils";
 
 interface EmbedCodeBlockProps {
@@ -761,9 +762,6 @@ function useOgMetadata(url: string): { data: OgData | null; loading: boolean } {
 				let ogData: OgData | null = null;
 
 				if (isTauri()) {
-					const { fetch: tauriFetch } = await import(
-						"@tauri-apps/plugin-http"
-					);
 					const res = await tauriFetch(url, {
 						method: "GET",
 						headers: {

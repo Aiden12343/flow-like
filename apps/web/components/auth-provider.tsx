@@ -54,18 +54,126 @@ export class OIDCTokenProvider implements TokenProvider {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Embedded auth bridge — used when Flow-Like is loaded inside an iframe
+// from the Bulltrackers web2.0 shell. The parent window sends a Firebase
+// ID token via postMessage; we inject it as a fake OIDC auth context so
+// the rest of the app works unchanged.
+// ---------------------------------------------------------------------------
+
+function isEmbedded(): boolean {
+	if (typeof window === "undefined") return false;
+	const params = new URLSearchParams(window.location.search);
+	return params.get("surface") === "bulltrackers-task-builder";
+}
+
+function EmbeddedAuthBridge({
+	children,
+}: Readonly<{ children: React.ReactNode }>) {
+	const backend = useBackend();
+	const [ready, setReady] = useState(false);
+
+	useEffect(() => {
+		function handleMessage(event: MessageEvent) {
+			if (event.data?.type !== "AUTH_READY") return;
+			const { token, apiBaseMain, apiBaseTask } =
+				event.data.payload ?? {};
+			if (!token) return;
+
+			// Build a minimal auth-shaped object so WebBackend can set the
+			// Authorization: Bearer header on all API calls.
+			const fakeAuth = {
+				isAuthenticated: true,
+				isLoading: false,
+				user: {
+					access_token: token,
+					id_token: token,
+					profile: { sub: "embedded" },
+					expired: false,
+				},
+				signinRedirect: () => Promise.resolve(),
+				signinSilent: () => Promise.resolve(null),
+				signoutRedirect: () => Promise.resolve(),
+				startSilentRenew: () => {},
+				activeNavigator: undefined,
+			} as unknown as import("react-oidc-context").AuthContextProps;
+
+			if (backend instanceof WebBackend) {
+				backend.pushAuthContext(fakeAuth);
+				backend.pushProfile({
+					...DEFAULT_PROFILE,
+					hub: apiBaseMain || apiBaseTask || DEFAULT_PROFILE.hub,
+				});
+			}
+			setReady(true);
+		}
+
+		window.addEventListener("message", handleMessage);
+
+		// Immediately ask the parent for a token
+		if (window.parent !== window) {
+			const params = new URLSearchParams(window.location.search);
+			const hostOrigin = params.get("hostOrigin") || "*";
+			window.parent.postMessage({ type: "REQUEST_AUTH" }, hostOrigin);
+		}
+
+		return () => window.removeEventListener("message", handleMessage);
+	}, [backend]);
+
+	if (!ready) {
+		return <LoadingScreen progress={80} />;
+	}
+
+	return (
+		<AuthProvider
+			authority="https://noop.invalid"
+			client_id="embedded-noop"
+			redirect_uri="https://noop.invalid"
+		>
+			{children}
+		</AuthProvider>
+	);
+}
+
+// ---------------------------------------------------------------------------
+// Main auth provider — OIDC flow for standalone, embedded bridge for iframe
+// ---------------------------------------------------------------------------
+
 export function WebAuthProvider({
 	children,
 }: Readonly<{ children: React.ReactNode }>) {
+	// In embedded mode (inside web2.0 iframe), bypass OIDC entirely
+	if (isEmbedded()) {
+		return <EmbeddedAuthBridge>{children}</EmbeddedAuthBridge>;
+	}
+
 	const [openIdAuthConfig, setOpenIdAuthConfig] =
 		useState<UserManagerSettings>();
 	const [userManager, setUserManager] = useState<UserManager>();
 	const [loadingProgress, setLoadingProgress] = useState(10);
+	const [authConfigError, setAuthConfigError] = useState<string | null>(null);
 
 	useEffect(() => {
 		(async () => {
 			setLoadingProgress(30);
-			const response = await get<any>(DEFAULT_PROFILE, "auth/openid");
+			let response: any;
+			try {
+				response = await get<any>(DEFAULT_PROFILE, "auth/openid");
+			} catch (error) {
+				console.error("Failed to load OpenID configuration:", error);
+				setAuthConfigError(
+					"Flow-Like could not reach the auth configuration endpoint.",
+				);
+				setLoadingProgress(100);
+				return;
+			}
+			if (!response) {
+				setAuthConfigError(
+					"Flow-Like auth is unavailable. Check the devkit API deployment or local API proxy.",
+				);
+				setLoadingProgress(100);
+				return;
+			}
 			if (response) {
 				setLoadingProgress(60);
 				if (process.env.NEXT_PUBLIC_REDIRECT_URL)
@@ -104,6 +212,10 @@ export function WebAuthProvider({
 		})();
 	}, []);
 
+	if (authConfigError) {
+		return <AuthConfigError message={authConfigError} />;
+	}
+
 	if (!openIdAuthConfig) {
 		return <LoadingScreen progress={loadingProgress} />;
 	}
@@ -121,6 +233,32 @@ export function WebAuthProvider({
 		>
 			<AuthInner>{children}</AuthInner>
 		</AuthProvider>
+	);
+}
+
+function AuthConfigError({ message }: Readonly<{ message: string }>) {
+	return (
+		<div className="fixed inset-0 z-50 flex items-center justify-center bg-background px-6 text-foreground">
+			<div className="w-full max-w-xl rounded-xl border border-border bg-card p-6 shadow-lg">
+				<p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+					Flow-Like startup blocked
+				</p>
+				<h1 className="mt-3 text-2xl font-semibold">Auth API unavailable</h1>
+				<p className="mt-3 text-sm leading-6 text-muted-foreground">
+					{message}
+				</p>
+				<p className="mt-4 rounded-md bg-muted px-3 py-2 font-mono text-xs text-muted-foreground">
+					/api/v1/auth/openid
+				</p>
+				<button
+					type="button"
+					className="mt-5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+					onClick={() => window.location.reload()}
+				>
+					Retry
+				</button>
+			</div>
+		</div>
 	);
 }
 

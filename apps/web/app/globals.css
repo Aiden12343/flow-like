@@ -1,0 +1,9 @@
+@config "../tailwind.config.ts";
+
+@source "../app";
+@source "../components";
+@source "../../../packages/ui/components";
+@source "../../../packages/ui/hooks";
+@source "../../../packages/ui/plugins";
+
+@import "@tm9657/flow-like-ui/global.css";

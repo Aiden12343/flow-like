@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { humanFileSize } from "../../../lib";
+import { tauriSave, tauriWriteBinaryFile } from "../../../lib/tauri";
 import {
 	Badge,
 	Button,
@@ -83,20 +84,17 @@ export async function downloadFile(file: ProcessedAttachment): Promise<void> {
 
 	if (isTauriEnv) {
 		try {
-			const { save } = await import("@tauri-apps/plugin-dialog");
-			const { writeFile } = await import("@tauri-apps/plugin-fs");
-
 			const response = await fetch(file.url);
 			const blob = await response.blob();
 			const arrayBuffer = await blob.arrayBuffer();
 
-			const filePath = await save({
+			const filePath = await tauriSave({
 				defaultPath: file.name,
 				filters: [{ name: "All Files", extensions: ["*"] }],
 			});
 
 			if (filePath) {
-				await writeFile(filePath, new Uint8Array(arrayBuffer));
+				await tauriWriteBinaryFile(filePath, new Uint8Array(arrayBuffer));
 			}
 			return;
 		} catch (e) {

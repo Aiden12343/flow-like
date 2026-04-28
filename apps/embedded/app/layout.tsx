@@ -1,10 +1,6 @@
 import "./globals.css";
 import type { Viewport } from "next";
 
-import { Inter } from "next/font/google";
-
-const inter = Inter({ subsets: ["latin"] });
-
 export const viewport: Viewport = {
 	width: "device-width",
 	initialScale: 1,
@@ -18,8 +14,10 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang="en" suppressHydrationWarning suppressContentEditableWarning>
-			<body className={inter.className}>{children}</body>
+		<html lang="en" suppressHydrationWarning suppressContentEditableWarning className="dark">
+			<body className="m-0 p-0 h-dvh w-dvw flex flex-col overflow-hidden">
+				{children}
+			</body>
 		</html>
 	);
 }

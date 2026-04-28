@@ -35,32 +35,34 @@ import {
 	useState,
 } from "react";
 import PuffLoader from "react-spinners/PuffLoader";
-import { useLogAggregation } from "../..";
-import { useInvalidateInvoke } from "../../hooks";
+import { useInvalidateInvoke } from "../../hooks/use-invoke";
 import { type PeerUserInfo, colorFromSub } from "../../hooks/use-peer-users";
 import {
 	getActivityColorClasses,
 	useRunActivity,
 } from "../../hooks/use-run-activity";
 import {
-	IExecutionMode,
-	type IGenericCommand,
-	ILogLevel,
-	IPinType,
-	IValueType,
 	moveNodeCommand,
 	removeNodeCommand,
 	updateNodeCommand,
 	upsertLayerCommand,
 	upsertPinCommand,
-} from "../../lib";
-import type { INode } from "../../lib";
+} from "../../lib/command/generic-command";
 import { logLevelFromNumber } from "../../lib/log-level";
 import type { IBoard, IComment, ILayer } from "../../lib/schema/flow/board";
+import {
+	IExecutionMode,
+	type IGenericCommand,
+	ILogLevel,
+	IPinType,
+	IValueType,
+} from "../../lib/schema/flow/board";
+import type { INode } from "../../lib/schema/flow/node";
 import { ILayerType } from "../../lib/schema/flow/board/commands/upsert-layer";
 import { type IPin, IVariableType } from "../../lib/schema/flow/pin";
 import { convertJsonToUint8Array } from "../../lib/uint8";
 import { useBackendStore } from "../../state/backend-state";
+import { useLogAggregation } from "../../state/log-aggregation-state";
 import { useRunExecutionStore } from "../../state/run-execution-state";
 import {
 	Dialog,
@@ -69,8 +71,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
-} from "../ui";
-import { DynamicImage } from "../ui";
+} from "../ui/dialog";
+import { DynamicImage } from "../ui/dynamic-image";
 import { AutoResizeText } from "./auto-resize-text";
 import { useUndoRedo } from "./flow-history";
 import { EventPayloadForm } from "./flow-node/event-payload-form";

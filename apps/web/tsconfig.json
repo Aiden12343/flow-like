@@ -18,7 +18,9 @@
 			}
 		],
 		"paths": {
-			"@/*": ["./*"]
+			"@/*": ["./*"],
+			"@tm9657/flow-like-ui": ["../../packages/ui/index.ts"],
+			"@tm9657/flow-like-ui/*": ["../../packages/ui/*"]
 		},
 		"target": "ES2020"
 	},

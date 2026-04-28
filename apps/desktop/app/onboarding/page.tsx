@@ -73,6 +73,13 @@ export default function Onboarding() {
 	const backend = useBackend();
 	const auth = useAuth();
 	const router = useRouter();
+	const isTauriRuntime =
+		typeof window !== "undefined" &&
+		("__TAURI__" in (window as any) ||
+			"__TAURI_IPC__" in (window as any) ||
+			"__TAURI_INTERNALS__" in (window as any));
+	const hasTauriInvoke = typeof invoke === "function";
+	const hasTauriFetch = typeof tauriFetch === "function";
 	const invalidate = useInvalidateTauriInvoke();
 	const canHostModels = backend.capabilities().canHostLlamaCPP;
 	const isAuthenticated = Boolean(auth?.isAuthenticated);
@@ -81,7 +88,7 @@ export default function Onboarding() {
 	const [totalSize, setTotalSize] = useState(0);
 	const [isPullingProfiles, setIsPullingProfiles] = useState(false);
 	const defaultProfiles: UseQueryResult<[[ISettingsProfile, IBit[]][], IHub]> =
-		useTauriInvoke("get_default_profiles", {});
+		useTauriInvoke("get_default_profiles", {}, [], isTauriRuntime);
 	const [activeProfiles, setActiveProfiles] = useState<string[]>([]);
 
 	const processedProfiles = useMemo<ProfileEntry[]>(
@@ -147,6 +154,7 @@ export default function Onboarding() {
 	}, [auth]);
 
 	useEffect(() => {
+		if (!isTauriRuntime || !hasTauriInvoke || !hasTauriFetch) return;
 		const accessToken = auth?.user?.access_token;
 		if (!isAuthenticated || !accessToken) return;
 		if (hasInitiatedProfilePull) return;
@@ -210,7 +218,7 @@ export default function Onboarding() {
 		return () => {
 			cancelled = true;
 		};
-	}, [isAuthenticated, auth?.user?.access_token, router]);
+	}, [isAuthenticated, auth?.user?.access_token, router, isTauriRuntime, hasTauriInvoke, hasTauriFetch]);
 
 	const handleToggleProfile = useCallback((profileId: string) => {
 		setActiveProfiles((previous) =>

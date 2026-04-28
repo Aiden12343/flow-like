@@ -10,7 +10,15 @@ import { RecordingDock } from "../../components/rpa";
 export default function FlowEditPage() {
 	const searchParams = useSearchParams();
 	const [showRecording, setShowRecording] = useState(false);
-	const auth = useAuth();
+	// We use a safe wrapper for useAuth as it might be missing in embedded mode
+	let auth: any = null;
+	try {
+		auth = useAuth();
+	} catch (e) {
+		// Ignore auth errors in embedded mode
+	}
+
+	const surface = searchParams.get("surface") ?? "";
 
 	const { boardId, appId, nodeId, version } = useMemo(() => {
 		const boardId = searchParams.get("id") ?? "";
@@ -22,15 +30,17 @@ export default function FlowEditPage() {
 		return { boardId, appId, nodeId, version };
 	}, [searchParams]);
 
-	if (boardId === "") return <p>Board not found...</p>;
+	if (boardId === "") {
+		return <p>Board not found. Open a board from the app sidebar.</p>;
+	}
 
-	return (
+	const flowContent = (
 		<FlowWrapper
 			boardId={boardId}
 			appId={appId}
 			nodeId={nodeId}
 			version={version}
-			sub={auth.user?.profile?.sub}
+			sub={auth?.user?.profile?.sub}
 			extraDockItems={[
 				{
 					icon: <Video className={showRecording ? "text-red-500" : ""} />,
@@ -44,7 +54,7 @@ export default function FlowEditPage() {
 					<RecordingDock
 						boardId={boardId}
 						appId={appId || undefined}
-						token={auth.user?.access_token}
+						token={auth?.user?.access_token}
 						version={version}
 						onClose={() => setShowRecording(false)}
 					/>
@@ -52,4 +62,6 @@ export default function FlowEditPage() {
 			}
 		/>
 	);
+
+	return flowContent;
 }

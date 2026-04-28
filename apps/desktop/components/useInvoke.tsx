@@ -11,18 +11,30 @@ export function useTauriInvoke<T>(
 	deps: string[] = [],
 	enabled = true,
 ): UseQueryResult<T, any> {
+	const hasTauriRuntime =
+		typeof window !== "undefined" &&
+		("__TAURI__" in (window as any) ||
+			"__TAURI_IPC__" in (window as any) ||
+			"__TAURI_INTERNALS__" in (window as any));
+	const hasInvokeFunction = typeof invoke === "function";
+
 	const query = useQuery({
 		queryKey: [...path.split("_"), ...deps],
 		queryFn: async () => {
 			try {
+				if (!hasTauriRuntime || !hasInvokeFunction) {
+					throw new Error(
+						`Tauri runtime unavailable for invoke(${path}) in web mode.`,
+					);
+				}
 				const response = await invoke(path, args);
 				return response as T;
 			} catch (error) {
-				console.error(JSON.stringify(error));
+				console.error(error);
 				throw error;
 			}
 		},
-		enabled: enabled,
+		enabled: enabled && hasTauriRuntime && hasInvokeFunction,
 	});
 
 	return query;

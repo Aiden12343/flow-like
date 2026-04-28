@@ -15,24 +15,6 @@ import type {
 import type { IBitState } from "./backend-state/bit-state";
 import type { IBoardState } from "./backend-state/board-state";
 import type { IDatabaseState } from "./backend-state/db-state";
-import {
-	EmptyAIState,
-	EmptyApiKeyState,
-	EmptyApiState,
-	EmptyAppState,
-	EmptyBitState,
-	EmptyBoardState,
-	EmptyDatabaseState,
-	EmptyEventState,
-	EmptyHelperState,
-	EmptyRoleState,
-	EmptyRouteState,
-	EmptyStorageState,
-	EmptyTeamState,
-	EmptyTemplateState,
-	EmptyUserState,
-} from "./backend-state/empty-states";
-import { EmptyUsageState } from "./backend-state/empty-states";
 import type { IEventState } from "./backend-state/event-state";
 import type { IHelperState } from "./backend-state/helper-state";
 import type { IPageState } from "./backend-state/page-state";
@@ -55,7 +37,6 @@ import type { IWidgetState } from "./backend-state/widget-state";
 export * from "./backend-state/api-key-state";
 export * from "./backend-state/api-key-state";
 export * from "./backend-state/api-state";
-export * from "./backend-state/empty-states/index";
 export * from "./backend-state/registry-state";
 export * from "./backend-state/idb-route-state";
 export * from "./backend-state/sales-state";
@@ -186,47 +167,37 @@ export const useBackendStore = create<BackendStoreState>((set) => ({
 	setBackend: (backend: IBackendState) => set({ backend }),
 }));
 
+function unavailableState<T>(name: string): T {
+	return new Proxy(
+		{},
+		{
+			get: () => {
+				throw new Error(`${name} is not available during prerender`);
+			},
+		},
+	) as T;
+}
+
 const serverBackend: IBackendState = {
-	appState: new EmptyAppState(),
-	apiState: new EmptyApiState(),
-	apiKeyState: new EmptyApiKeyState(),
-	bitState: new EmptyBitState(),
-	boardState: new EmptyBoardState(),
-	userState: new EmptyUserState(),
-	teamState: new EmptyTeamState(),
-	roleState: new EmptyRoleState(),
-	storageState: new EmptyStorageState(),
-	templateState: new EmptyTemplateState(),
-	helperState: new EmptyHelperState(),
-	eventState: new EmptyEventState(),
-	aiState: new EmptyAIState(),
-	dbState: new EmptyDatabaseState(),
-	widgetState: new Proxy(
-		{},
-		{
-			get: () => {
-				throw new Error("WidgetState is not available during prerender");
-			},
-		},
-	) as IWidgetState,
-	pageState: new Proxy(
-		{},
-		{
-			get: () => {
-				throw new Error("PageState is not available during prerender");
-			},
-		},
-	) as IPageState,
-	routeState: new EmptyRouteState(),
-	registryState: new Proxy(
-		{},
-		{
-			get: () => {
-				throw new Error("RegistryState is not available during prerender");
-			},
-		},
-	) as IRegistryState,
-	usageState: new EmptyUsageState(),
+	appState: unavailableState<IAppState>("AppState"),
+	apiState: unavailableState<IApiState>("ApiState"),
+	apiKeyState: unavailableState<IApiKeyState>("ApiKeyState"),
+	bitState: unavailableState<IBitState>("BitState"),
+	boardState: unavailableState<IBoardState>("BoardState"),
+	userState: unavailableState<IUserState>("UserState"),
+	teamState: unavailableState<ITeamState>("TeamState"),
+	roleState: unavailableState<IRoleState>("RoleState"),
+	storageState: unavailableState<IStorageState>("StorageState"),
+	templateState: unavailableState<ITemplateState>("TemplateState"),
+	helperState: unavailableState<IHelperState>("HelperState"),
+	eventState: unavailableState<IEventState>("EventState"),
+	aiState: unavailableState<IAIState>("AIState"),
+	dbState: unavailableState<IDatabaseState>("DatabaseState"),
+	widgetState: unavailableState<IWidgetState>("WidgetState"),
+	pageState: unavailableState<IPageState>("PageState"),
+	routeState: unavailableState<IAppRouteState>("RouteState"),
+	registryState: unavailableState<IRegistryState>("RegistryState"),
+	usageState: unavailableState<IUsageState>("UsageState"),
 	capabilities: () => ({
 		needsSignIn: false,
 		canHostLlamaCPP: false,

@@ -31,21 +31,23 @@ import {
 	type ILogAggregationFilter,
 	useLogAggregation,
 } from "../../state/log-aggregation-state";
+import { Button } from "../ui/button";
 import {
-	Button,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-	EmptyState,
+} from "../ui/dropdown-menu";
+import { EmptyState } from "../ui/empty-state";
+import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "../ui";
+} from "../ui/select";
 
 function parseVersion(versionStr: string): [number, number, number] | undefined {
 	const normalized = versionStr.trim().replace(/^v/i, "");

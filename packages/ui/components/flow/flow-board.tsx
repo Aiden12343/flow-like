@@ -36,15 +36,11 @@ import {
 	ArrowBigLeftDashIcon,
 	CheckIcon,
 	Eye,
-	FileTextIcon,
 	HistoryIcon,
-	LayoutTemplateIcon,
-	NotebookPenIcon,
 	PlayCircleIcon,
 	ScrollIcon,
 	SearchIcon,
 	ShareIcon,
-	SparklesIcon,
 	SquareChevronUpIcon,
 	SquareFunctionIcon,
 	VariableIcon,
@@ -64,18 +60,11 @@ import {
 	useState,
 } from "react";
 import type { ImperativePanelHandle } from "react-resizable-panels";
-import {
-	Button,
-	Sheet,
-	SheetContent,
-	SheetHeader,
-	SheetTitle,
-	useHub,
-	useLogAggregation,
-	useMobileHeader,
-} from "../..";
+import { useHub } from "../../hooks/use-hub";
+import { Button } from "../ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../ui/sheet";
+import { useMobileHeader } from "../ui/mobile-header";
 import { BoardActivityIndicator } from "../../components/flow/board-activity-indicator";
-import { CommentNode } from "../../components/flow/comment-node";
 import { FlowContextMenu } from "../../components/flow/flow-context-menu";
 import { FlowDock } from "../../components/flow/flow-dock";
 import { FlowNode } from "../../components/flow/flow-node";
@@ -97,7 +86,6 @@ import {
 	ResizablePanelGroup,
 } from "../../components/ui/resizable";
 import { useCommandExecution } from "../../hooks/use-command-execution";
-import { useCopilotCommands } from "../../hooks/use-copilot-commands";
 import { useFlowPanels } from "../../hooks/use-flow-panels";
 import { useInvoke } from "../../hooks/use-invoke";
 import { useKeyboardShortcuts } from "../../hooks/use-keyboard-shortcuts";
@@ -110,17 +98,13 @@ import { useFollowMode } from "../../hooks/use-follow-mode";
 import { useRealtimeChat } from "../../hooks/use-realtime-chat";
 import { useExecutionPresence } from "../../hooks/use-execution-presence";
 import {
-	type IGenericCommand,
-	type ILogMetadata,
-	IPinType,
-	IValueType,
 	connectPinsCommand,
 	disconnectPinsCommand,
 	moveNodeCommand,
 	updateNodeCommand,
 	upsertCommentCommand,
 	upsertVariableCommand,
-} from "../../lib";
+} from "../../lib/command/generic-command";
 import {
 	handleConnection,
 	handleEdgesChange,
@@ -142,21 +126,25 @@ import {
 	type IBoard,
 	type IComment,
 	ICommentType,
+	IPinType,
+	IValueType,
 	type IVariable,
 } from "../../lib/schema/flow/board";
+import type { IGenericCommand } from "../../lib/schema/flow/board/commands/generic-command";
+import type { Suggestion } from "../../lib/schema/flow/copilot";
+import type { ILogMetadata } from "../../lib/schema/flow/log-metadata";
 import { type INode, IVariableType } from "../../lib/schema/flow/node";
 import type { IPin } from "../../lib/schema/flow/pin";
 import type { ILayer } from "../../lib/schema/flow/run";
 import { convertJsonToUint8Array } from "../../lib/uint8";
 import { useBackend } from "../../state/backend-state";
 import { useFlowBoardParentState } from "../../state/flow-board-parent-state";
+import { useLogAggregation } from "../../state/log-aggregation-state";
 import { useRunExecutionStore } from "../../state/run-execution-state";
 import {
 	type RuntimeVariableValue,
 	useRuntimeVariables,
 } from "../../state/runtime-variables-context";
-import { BoardMeta } from "./board-meta";
-import { FlowCopilot, type Suggestion } from "./flow-copilot";
 import { FlowCursors } from "./flow-cursors";
 import { FlowDataEdge } from "./flow-data-edge";
 import { FlowExecutionEdge } from "./flow-execution-edge";
@@ -167,7 +155,6 @@ import { FlowChat } from "./flow-chat";
 import { PinEditModal } from "./flow-pin/edit-modal";
 import { FlowRuns } from "./flow-runs";
 import { FlowSearch } from "./flow-search";
-import { FlowTemplateSelector } from "./flow-template-selector";
 import { FlowVeilEdge } from "./flow-veil-edge";
 import { LayerInnerNode } from "./layer-inner-node";
 import { CallFunctionNode } from "./call-function-node";
@@ -315,7 +302,7 @@ export function FlowBoard({
 		}
 
 		right.push(
-			...[
+			...[ 
 				<Button
 					variant={"outline"}
 					size={"icon"}
@@ -324,25 +311,6 @@ export function FlowBoard({
 					}}
 				>
 					<VariableIcon />
-				</Button>,
-
-				<Button
-					variant={"outline"}
-					size={"icon"}
-					onClick={() => {
-						setTemplateSelectorOpen(true);
-					}}
-				>
-					<LayoutTemplateIcon />
-				</Button>,
-				<Button
-					variant={"outline"}
-					size={"icon"}
-					onClick={async () => {
-						setEditBoard(true);
-					}}
-				>
-					<NotebookPenIcon />
 				</Button>,
 				<Button
 					variant={"outline"}
@@ -367,23 +335,6 @@ export function FlowBoard({
 				}}
 			>
 				<ScrollIcon />
-			</Button>,
-		);
-
-		// FlowPilot button with fancy styling
-		right.push(
-			<Button
-				variant={"outline"}
-				size={"icon"}
-				aria-label="Open FlowPilot"
-				onClick={() => setCopilotOpen(true)}
-				className="relative group border-primary/30 hover:border-primary/60 hover:bg-primary/5"
-			>
-				<div className="absolute inset-0 rounded-md bg-linear-to-br from-primary/20 via-violet-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-				<SparklesIcon className="w-4 h-4 text-primary relative z-10" />
-				{currentMetadata && (
-					<span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-500 rounded-full" />
-				)}
 			</Button>,
 		);
 
@@ -1708,7 +1659,6 @@ export function FlowBoard({
 	const nodeTypes = useMemo(
 		() => ({
 			flowNode: FlowNode,
-			commentNode: CommentNode,
 			mediaNode: MediaNode,
 			uploadPlaceholderNode: UploadPlaceholderNode,
 			layerNode: LayerNode,
@@ -2424,40 +2374,8 @@ export function FlowBoard({
 		);
 	}, []);
 
-	// Use the copilot commands hook for executing AI-generated commands
-	const { handleExecuteCommands } = useCopilotCommands({
-		board,
-		catalog,
-		executeCommand,
-		currentLayer,
-	});
-
 	return (
 		<div className="w-full flex flex-1 grow flex-col min-h-0 relative overflow-hidden">
-			{/* Desktop FlowPilot floating panel */}
-			{copilotOpen && (
-				<div className="hidden md:block fixed inset-0 z-100 pointer-events-none">
-					<div className="absolute top-4 right-4 w-[420px] h-[calc(100%-2rem)] max-h-[700px] pointer-events-auto">
-						<FlowCopilot
-							board={board.data}
-							selectedNodeIds={Array.from(selected.current)}
-							onAcceptSuggestion={onAcceptSuggestion}
-							onFocusNode={focusNode}
-							onSelectNodes={selectNodes}
-							onGhostNodesChange={handleGhostNodesChange}
-							onExecuteCommands={handleExecuteCommands}
-							runContext={currentMetadata}
-							onClearRunContext={() => setCurrentMetadata(undefined)}
-							onClose={() => {
-								setCopilotOpen(false);
-								setCopilotInitialPrompt(undefined);
-							}}
-							mode="panel"
-							initialPrompt={copilotInitialPrompt}
-						/>
-					</div>
-				</div>
-			)}
 			{/* Top-right toolbar - Figma style with connection status */}
 			<div className="fixed right-3 top-16 z-50 flex items-center gap-2 sm:right-4 sm:top-16 md:right-6 md:top-6">
 				{/* Connection status indicator */}
@@ -2539,23 +2457,6 @@ export function FlowBoard({
 				</div>
 			)}
 			<div className="flex items-center justify-center absolute translate-x-[-50%] mt-5 left-[50dvw] z-40">
-				{board.data && editBoard && (
-					<BoardMeta
-						appId={appId}
-						board={board.data}
-						boardId={boardId}
-						closeMeta={() => setEditBoard(false)}
-						version={version}
-						selectVersion={(version) => setVersion(version)}
-						onPageClick={(pageId) => {
-							setEditBoard(false);
-							router.push(
-								`/page-builder?id=${pageId}&app=${appId}&board=${boardId}`,
-							);
-						}}
-						isOffline={app.data?.visibility === IAppVisibility.Offline}
-					/>
-				)}
 				<FlowDock
 					mobileClassName="hidden"
 					items={[
@@ -2579,33 +2480,11 @@ export function FlowBoard({
 								toggleVars();
 							},
 						},
-
-						{
-							icon: <LayoutTemplateIcon />,
-							title: "Templates",
-							onClick: async () => {
-								setTemplateSelectorOpen(true);
-							},
-						},
 						{
 							icon: <WaypointsIcon />,
 							title: "Auto Layout",
 							onClick: async () => {
 								setAutoLayoutDialogOpen(true);
-							},
-						},
-						{
-							icon: <NotebookPenIcon />,
-							title: "Manage Board",
-							onClick: async () => {
-								setEditBoard(true);
-							},
-						},
-						{
-							icon: <FileTextIcon />,
-							title: "Pages",
-							onClick: async () => {
-								togglePages();
 							},
 						},
 						{
@@ -2653,25 +2532,10 @@ export function FlowBoard({
 								]
 							: []),
 						...(extraDockItems ?? []),
-						{
-							icon: <SparklesIcon className="text-white" />,
-							title: "FlowPilot",
-							separator: "left",
-							special: true,
-							onClick: () => setCopilotOpen(true),
-						},
 					]}
 				/>
 				{renderOverlay?.()}
 			</div>
-
-			{/* Template Selector Overlay - FigJam style centered overlay */}
-			{(templateSelectorOpen || (isBoardEmpty && !currentLayer)) && (
-				<FlowTemplateSelector
-					onSelectTemplate={handleApplyTemplate}
-					onDismiss={() => setTemplateSelectorOpen(false)}
-				/>
-			)}
 
 			<ResizablePanelGroup
 				direction="horizontal"
@@ -2684,8 +2548,8 @@ export function FlowBoard({
 				{/* Desktop/Tablet side panels */}
 				<ResizablePanel
 					className="z-50 bg-background hidden md:block"
-					autoSave="flow-variables"
-					defaultSize={0}
+					autoSave="flow-variables-v2"
+					defaultSize={20}
 					collapsible={true}
 					collapsedSize={0}
 					ref={varPanelRef}
@@ -3019,51 +2883,6 @@ export function FlowBoard({
 								No run selected yet. Start a run to view logs here.
 							</div>
 						)}
-					</SheetContent>
-				</Sheet>
-				{/* Pages Sheet */}
-				<Sheet open={pagesOpen} onOpenChange={setPagesOpen}>
-					<SheetContent side="right" className="w-[400px] sm:w-[540px] p-0">
-						<FlowPages
-							appId={appId}
-							boardId={boardId}
-							onOpenPage={(pageId, bId) => {
-								setPagesOpen(false);
-								router.push(
-									`/page-builder?id=${pageId}&app=${appId}&board=${bId}`,
-								);
-							}}
-						/>
-					</SheetContent>
-				</Sheet>
-				{/* Mobile FlowPilot Sheet */}
-				<Sheet
-					open={copilotOpen && isMobile}
-					onOpenChange={(open) => {
-						setCopilotOpen(open);
-						if (!open) setCopilotInitialPrompt(undefined);
-					}}
-				>
-					<SheetContent side="bottom" className="h-[85dvh] w-full p-0">
-						<div className="h-full w-full">
-							<FlowCopilot
-								board={board.data}
-								selectedNodeIds={Array.from(selected.current)}
-								onAcceptSuggestion={onAcceptSuggestion}
-								onFocusNode={focusNode}
-								onSelectNodes={selectNodes}
-								onGhostNodesChange={handleGhostNodesChange}
-								onExecuteCommands={handleExecuteCommands}
-								runContext={currentMetadata}
-								onClearRunContext={() => setCurrentMetadata(undefined)}
-								onClose={() => {
-									setCopilotOpen(false);
-									setCopilotInitialPrompt(undefined);
-								}}
-								mode="panel"
-								initialPrompt={copilotInitialPrompt}
-							/>
-						</div>
 					</SheetContent>
 				</Sheet>
 			</ResizablePanelGroup>

@@ -25,14 +25,17 @@ import "react-virtualized/styles.css";
 import { QuestionMarkCircledIcon } from "@radix-ui/react-icons";
 import { VariableSizeList as List, type VariableSizeList } from "react-window";
 import { toast } from "sonner";
-import { type IBoard, type ILog, useBackend, useInfiniteInvoke } from "../..";
 import { parseTimespan } from "../../lib/date";
+import type { IBoard, ILog } from "../../lib/schema/flow/board";
 import { logLevelToNumber } from "../../lib/log-level";
 import { ILogLevel, type ILogMessage } from "../../lib/schema/flow/run";
+import { useInfiniteInvoke } from "../../hooks/use-invoke";
+import { useBackend } from "../../state/backend-state";
 import { useLogAggregation } from "../../state/log-aggregation-state";
-import { DynamicImage, EmptyState } from "../ui";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { DynamicImage } from "../ui/dynamic-image";
+import { EmptyState } from "../ui/empty-state";
 import { Input } from "../ui/input";
 
 interface IEnrichedLogMessage extends ILogMessage {
@@ -424,7 +427,7 @@ const LogMessage = memo(function LogMessage({
 						<div />
 					)}
 					<div className="flex flex-row items-center gap-1">
-						<div className="m-0! mr-2 p-0!">
+						<div className="!m-0 mr-2 !p-0">
 							{!!node ? (
 								<span className={`flex flex-row items-center gap-2`}>
 									<DynamicImage

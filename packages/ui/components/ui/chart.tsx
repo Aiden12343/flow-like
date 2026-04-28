@@ -113,15 +113,7 @@ ${colorConfig
 	);
 };
 
-type Payload = {
-	dataKey: string;
-	name: string;
-	value: string;
-	payload: {
-		fill: string;
-	}[];
-	color: string;
-}[];
+type Payload = any[];
 
 const ChartTooltip = RechartsPrimitive.Tooltip;
 

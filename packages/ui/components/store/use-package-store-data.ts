@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useInvoke } from "../../hooks/use-invoke";
+import { tauriOpenUrl } from "../../lib/tauri";
 import type { RegistryEntry } from "../../lib/schema/wasm";
 import type {
 	RequestAccessResponse,
@@ -13,8 +14,7 @@ import type { GenericFetcher } from "../pages/store/store-package-detail";
 
 async function openCheckoutUrl(url: string) {
 	if (typeof window !== "undefined" && "__TAURI__" in window) {
-		const { openUrl } = await import("@tauri-apps/plugin-opener");
-		await openUrl(url);
+		await tauriOpenUrl(url);
 		toast.info("Opening checkout in your browser...");
 	} else {
 		window.open(url, "_blank");

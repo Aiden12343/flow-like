@@ -14,7 +14,7 @@ import { createPrimitiveComponent } from "@udecode/cn";
 import { cva } from "class-variance-authority";
 
 import { cn } from "../../../lib/utils";
-import { Button } from "../../ui";
+import { Button } from "../../ui/button";
 
 const captionVariants = cva("max-w-full", {
 	defaultVariants: {

@@ -180,10 +180,11 @@ export function LoadingScreen({
 	const clamped = Math.min(Math.max(progress, 0), 100);
 
 	const allCards = useMemo(() => [...TIPS, ...HINTS], []);
-	const [cardIndex, setCardIndex] = useState(() => pickRandom(allCards));
+	const [cardIndex, setCardIndex] = useState(0);
 	const [transitioning, setTransitioning] = useState(false);
 
 	useEffect(() => {
+		setCardIndex(pickRandom(allCards));
 		const id = setInterval(() => {
 			setTransitioning(true);
 			setTimeout(() => {

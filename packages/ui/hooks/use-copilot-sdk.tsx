@@ -7,6 +7,7 @@ import type {
 	CopilotModel,
 } from "../components/flowpilot/types";
 import { isTauri } from "../lib/platform";
+import { tauriInvoke } from "../lib/tauri";
 
 interface UseCopilotSDKResult {
 	/** Whether the Copilot SDK client is running */
@@ -53,8 +54,7 @@ export function useCopilotSDK(): UseCopilotSDKResult {
 			setError(null);
 
 			try {
-				const { invoke } = await import("@tauri-apps/api/core");
-				await invoke("copilot_sdk_start", {
+				await tauriInvoke("copilot_sdk_start", {
 					useStdio: config?.useStdio ?? true,
 					cliUrl: config?.serverUrl,
 				});
@@ -77,8 +77,7 @@ export function useCopilotSDK(): UseCopilotSDKResult {
 		setError(null);
 
 		try {
-			const { invoke } = await import("@tauri-apps/api/core");
-			await invoke("copilot_sdk_stop");
+			await tauriInvoke("copilot_sdk_stop");
 			setIsRunning(false);
 			setModels([]);
 			setAuthStatus(null);
@@ -95,8 +94,7 @@ export function useCopilotSDK(): UseCopilotSDKResult {
 		if (!isTauriEnv || !isRunning) return;
 
 		try {
-			const { invoke } = await import("@tauri-apps/api/core");
-			const result = await invoke<CopilotModel[]>("copilot_sdk_list_models");
+			const result = await tauriInvoke<CopilotModel[]>("copilot_sdk_list_models");
 			setModels(result);
 		} catch (e) {
 			const errMsg = e instanceof Error ? e.message : String(e);
@@ -108,8 +106,7 @@ export function useCopilotSDK(): UseCopilotSDKResult {
 		if (!isTauriEnv || !isRunning) return;
 
 		try {
-			const { invoke } = await import("@tauri-apps/api/core");
-			const result = await invoke<CopilotAuthStatus>(
+			const result = await tauriInvoke<CopilotAuthStatus>(
 				"copilot_sdk_get_auth_status",
 			);
 			setAuthStatus(result);
@@ -125,8 +122,7 @@ export function useCopilotSDK(): UseCopilotSDKResult {
 
 		const checkRunning = async () => {
 			try {
-				const { invoke } = await import("@tauri-apps/api/core");
-				const running = await invoke<boolean>("copilot_sdk_is_running");
+				const running = await tauriInvoke<boolean>("copilot_sdk_is_running");
 				setIsRunning(running);
 			} catch {
 				// Ignore errors during initial check

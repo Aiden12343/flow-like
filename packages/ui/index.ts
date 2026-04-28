@@ -1,4 +1,5 @@
 "use client";
+
 export * from "./components/index";
 export * from "./hooks/index";
 export * from "./lib/index";
@@ -14,6 +15,10 @@ export * from "./state/execution-service-context";
 export type { IRunUpdateEvent } from "./state/run-execution-state";
 export * from "./types";
 export * from "./db/index";
+export * from "./plugins/bulltrackers/index";
+
+// Explicitly export IBitTypes which was causing issues
+export { IBitTypes } from "./lib/schema/bit/bit";
 
 // Dependency exports
 export {

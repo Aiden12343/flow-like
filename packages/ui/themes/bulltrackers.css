@@ -1,0 +1,158 @@
+/**
+ * @fileoverview Bulltrackers Theme Override for Flow-Like
+ *
+ * Overrides flow-like's default OKLCH-based design tokens with
+ * Bulltrackers' dark-mode lime-accent colour scheme.
+ *
+ * This file is loaded AFTER global.css so all custom properties
+ * are overridden in-cascade.
+ *
+ * Colour derivations are based on web2.0/src/theme/theme.ts and
+ * the HSL variables declared in web2.0/tailwind.config.js:
+ *   --background:  48 10% 5%     → very dark warm grey
+ *   --primary:     84 44% 64%    → lime green
+ *   --card:        42 11% 8%     → dark card surface
+ *   --border:      76 13% 23%    → lime-tinted border
+ */
+
+/* ─── Force dark mode ───────────────────────────────────────── */
+:root {
+  color-scheme: dark;
+}
+
+/* ─── Bulltrackers Dark Theme ───────────────────────────────── */
+.dark,
+:root {
+  /* Core surfaces */
+  --background:         oklch(0.14 0.005 85);         /* hsl(48 10% 5%)  */
+  --foreground:         oklch(0.95 0.005 100);        /* warm white */
+  --card:               oklch(0.19 0.006 80);         /* hsl(42 11% 8%)  */
+  --card-foreground:    oklch(0.93 0.005 100);
+  --popover:            oklch(0.16 0.005 85);
+  --popover-foreground: oklch(0.95 0.005 100);
+
+  /* Primary — Lime green accent */
+  --primary:            oklch(0.78 0.16 130);         /* hsl(84 44% 64%) → lime */
+  --primary-foreground: oklch(0.12 0.01 85);          /* near-black text on lime */
+
+  /* Secondary */
+  --secondary:          oklch(0.40 0.005 85);
+  --secondary-foreground: oklch(0.90 0.005 100);
+
+  /* Tertiary — warm amber for highlights */
+  --tertiary:           oklch(0.75 0.15 64);
+  --tertiary-foreground: oklch(0.95 0.005 100);
+
+  /* Muted */
+  --muted:              oklch(0.25 0.005 85);
+  --muted-foreground:   oklch(0.60 0.005 100);
+
+  /* Accent — lime tint */
+  --accent:             oklch(0.30 0.04 130);
+  --accent-foreground:  oklch(0.90 0.10 130);
+
+  /* Destructive */
+  --destructive:        oklch(0.50 0.20 25);
+  --destructive-foreground: oklch(0.95 0.01 25);
+
+  /* Borders & inputs */
+  --border:             oklch(0.32 0.03 130);         /* hsl(76 13% 23%) */
+  --input:              oklch(0.28 0.02 130);
+  --ring:               oklch(0.78 0.16 130);
+
+  /* Charts — lime palette */
+  --chart-1:            oklch(0.78 0.16 130);
+  --chart-2:            oklch(0.72 0.14 125);
+  --chart-3:            oklch(0.65 0.12 120);
+  --chart-4:            oklch(0.58 0.10 118);
+  --chart-5:            oklch(0.50 0.08 115);
+
+  /* Sidebar */
+  --sidebar:            oklch(0.12 0.005 85);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary:    var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent:     var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border:     var(--border);
+  --sidebar-ring:       var(--ring);
+
+  /* Typography */
+  --font-sans:  Inter, system-ui, -apple-system, sans-serif;
+  --font-serif: Source Serif 4, serif;
+  --font-mono:  JetBrains Mono, ui-monospace, monospace;
+
+  /* Radius */
+  --radius: 0.5rem;
+
+  /* Pin (port) colours — remap to lime spectrum */
+  --pin-string:   oklch(0.78 0.16 130);     /* lime */
+  --pin-integer:  oklch(0.72 0.14 190);     /* teal */
+  --pin-float:    oklch(0.75 0.15 155);     /* green */
+  --pin-boolean:  oklch(0.65 0.18 25);      /* warm red */
+  --pin-struct:   oklch(0.60 0.22 300);     /* violet */
+  --pin-byte:     oklch(0.50 0.08 160);     /* muted green */
+  --pin-generic:  oklch(0.55 0.04 100);     /* neutral */
+  --pin-date:     oklch(0.80 0.15 85);      /* amber */
+  --pin-pathbuf:  oklch(0.45 0.01 75);      /* warm grey */
+  --pin-fn-ref:   oklch(0.68 0.14 50);      /* orange */
+}
+
+/* ─── Bulltrackers Glass Effects ────────────────────────────── */
+.bt-glass-panel {
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  border: 1px solid oklch(0.32 0.03 130 / 0.3);
+}
+
+.bt-glass-panel-subtle {
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid oklch(0.32 0.03 130 / 0.15);
+}
+
+/* ─── Node styling overrides ────────────────────────────────── */
+.react-flow__node {
+  border-color: oklch(0.32 0.03 130) !important;
+}
+
+.react-flow__node.selected {
+  border-color: oklch(0.78 0.16 130) !important;
+  box-shadow: 0 0 0 2px oklch(0.78 0.16 130 / 0.25) !important;
+}
+
+.react-flow__node:hover {
+  border-color: oklch(0.78 0.16 130 / 0.5) !important;
+}
+
+/* ─── Edge styling overrides ────────────────────────────────── */
+.react-flow__edge path {
+  stroke: oklch(0.50 0.08 130) !important;
+}
+
+.react-flow__edge.selected path {
+  stroke: oklch(0.78 0.16 130) !important;
+}
+
+/* ─── Canvas background ─────────────────────────────────────── */
+.react-flow__background pattern circle {
+  fill: oklch(0.25 0.01 85) !important;
+}
+
+/* ─── Toolbar floating panels ───────────────────────────────── */
+.react-flow__panel {
+  background: transparent !important;
+}
+
+/* ─── Attribution notice (BSL) ──────────────────────────────── */
+.bt-attribution {
+  position: fixed;
+  bottom: 4px;
+  right: 8px;
+  font-size: 10px;
+  color: oklch(0.40 0.005 85);
+  pointer-events: none;
+  z-index: 1;
+}

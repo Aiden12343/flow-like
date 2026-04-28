@@ -1,6 +1,5 @@
 "use client";
 import { createId } from "@paralleldrive/cuid2";
-import { SidebarTrigger } from "@tm9657/flow-like-ui";
 import React, {
 	createContext,
 	useCallback,
@@ -10,6 +9,7 @@ import React, {
 	useState,
 	useEffect,
 } from "react";
+import { SidebarTrigger } from "./sidebar";
 
 export type MobileHeaderControls = {
 	title?: React.ReactNode;

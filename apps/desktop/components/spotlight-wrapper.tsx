@@ -1,6 +1,5 @@
 "use client";
 
-import * as Sentry from "@sentry/nextjs";
 import { invoke } from "@tauri-apps/api/core";
 import {
 	IBitTypes,
@@ -29,6 +28,7 @@ import { useCallback, useMemo } from "react";
 import { useAuth } from "react-oidc-context";
 import { toast } from "sonner";
 import { type IShortcut, appsDB } from "../lib/apps-db";
+import { showClientReportDialog } from "../lib/sentry-client";
 import { useTauriInvoke } from "./useInvoke";
 
 interface SpotlightWrapperProps {
@@ -202,7 +202,7 @@ export function SpotlightWrapper({ children }: SpotlightWrapperProps) {
 	);
 
 	const handleReportBug = useCallback(() => {
-		Sentry.showReportDialog({
+		void showClientReportDialog({
 			title: "Report a Bug",
 			subtitle: "Please describe the bug you encountered",
 			subtitle2: "",

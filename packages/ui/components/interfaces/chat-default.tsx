@@ -31,6 +31,7 @@ import {
 } from "../../lib";
 import type { IInteractionRequest } from "../../lib/schema/interaction";
 import { useSetQueryParams } from "../../lib/set-query-params";
+import { tauriInvoke } from "../../lib/tauri";
 import { parseUint8ArrayToJson } from "../../lib/uint8";
 import { useBackend } from "../../state/backend-state";
 import { useExecutionEngine } from "../../state/execution-engine-context";
@@ -501,8 +502,7 @@ export const ChatInterfaceMemoized = memo(function ChatInterface({
 						throw new Error(`API responded ${res.status}: ${errorText}`);
 					}
 				} else {
-					const { invoke } = await import("@tauri-apps/api/core");
-					await invoke("respond_to_interaction", {
+					await tauriInvoke("respond_to_interaction", {
 						interactionId,
 						value,
 					});

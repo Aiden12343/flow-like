@@ -1,22 +1,30 @@
 "use client";
 import {
-	HomeSwimlanes,
 	Skeleton,
-	TutorialDialog,
-	useBackend,
 } from "@tm9657/flow-like-ui";
+import { TutorialDialog } from "@tm9657/flow-like-ui/components/pages/home/tutorial-dialog";
+import { HomeSwimlanes } from "@tm9657/flow-like-ui/components/pages/home/swim-lanes";
 import type { ISettingsProfile } from "@tm9657/flow-like-ui/types";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTauriInvoke } from "../components/useInvoke";
 
 export default function Home() {
-	const backend = useBackend();
 	const router = useRouter();
+	const isTauriRuntime = useMemo(
+		() =>
+			typeof window !== "undefined" &&
+			("__TAURI__" in (window as any) ||
+				"__TAURI_IPC__" in (window as any) ||
+				"__TAURI_INTERNALS__" in (window as any)),
+		[],
+	);
 	const [isCheckingProfiles, setIsCheckingProfiles] = useState(true);
 	const profiles = useTauriInvoke<Record<string, ISettingsProfile>>(
 		"get_profiles",
 		{},
+		[],
+		isTauriRuntime,
 	);
 
 	const checkProfiles = useCallback(async () => {
@@ -54,8 +62,12 @@ export default function Home() {
 	]);
 
 	useEffect(() => {
+		if (!isTauriRuntime) {
+			setIsCheckingProfiles(false);
+			return;
+		}
 		checkProfiles();
-	}, [checkProfiles]);
+	}, [checkProfiles, isTauriRuntime]);
 
 	if (profiles.isLoading || isCheckingProfiles) {
 		return (

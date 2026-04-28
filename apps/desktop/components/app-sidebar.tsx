@@ -1,6 +1,5 @@
 "use client";
 import { createId } from "@paralleldrive/cuid2";
-import * as Sentry from "@sentry/nextjs";
 import { invoke } from "@tauri-apps/api/core";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -122,6 +121,7 @@ import { fetcher } from "../lib/api";
 import { CreateProfileDialog } from "./add-profile";
 import { Shortcuts } from "./shortcuts";
 import { useTauriInvoke } from "./useInvoke";
+import { captureClientFeedback } from "../lib/sentry-client";
 
 const data = {
 	navMain: [
@@ -390,7 +390,7 @@ function InnerSidebar() {
 									<Button
 										disabled={feedback.message === ""}
 										onClick={() => {
-											Sentry.captureFeedback(
+											void captureClientFeedback(
 												{
 													name:
 														feedback.name === "" ? undefined : feedback.name, // optional

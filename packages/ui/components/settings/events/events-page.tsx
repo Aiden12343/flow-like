@@ -1291,7 +1291,7 @@ function EventConfiguration({
 												<Button
 													size={"icon"}
 													variant={"ghost"}
-													className="p-0! w-4 h-4 ml-1 mb-[0.1rem]"
+													className="!p-0 w-4 h-4 ml-1 mb-[0.1rem]"
 												>
 													<ExternalLinkIcon className="w-4 h-4 group-hover:text-primary" />
 												</Button>

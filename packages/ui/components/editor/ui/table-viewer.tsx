@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 
+import { tauriSave, tauriWriteTextFile } from "../../../lib/tauri";
 import { cn, sanitizeImageUrl } from "../../../lib/utils";
 import {
 	Button,
@@ -92,10 +93,7 @@ async function downloadCSV(data: string[][], filename = "table.csv") {
 	// Check if we're in Tauri environment
 	if (typeof window !== "undefined" && "__TAURI__" in window) {
 		try {
-			const { save } = await import("@tauri-apps/plugin-dialog");
-			const { writeTextFile } = await import("@tauri-apps/plugin-fs");
-
-			const filePath = await save({
+			const filePath = await tauriSave({
 				canCreateDirectories: true,
 				title: "Save CSV",
 				defaultPath: filename,
@@ -103,7 +101,7 @@ async function downloadCSV(data: string[][], filename = "table.csv") {
 			});
 
 			if (filePath) {
-				await writeTextFile(filePath, csv);
+				await tauriWriteTextFile(filePath, csv);
 				return;
 			}
 			// User cancelled, don't fall through

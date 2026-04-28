@@ -112,7 +112,8 @@ function parseSimpleYaml(input: string): Record<string, unknown> | null {
 			return null;
 		}
 
-		return Object.keys(parsed).length > 0 ? parsed : null;
+		const parsedRecord = parsed as Record<string, unknown>;
+		return Object.keys(parsedRecord).length > 0 ? parsedRecord : null;
 	} catch {
 		return null;
 	}

@@ -73,7 +73,13 @@ async function loadNotificationPlugin(): Promise<NotificationApi | null> {
 
 async function loadRemotePushPlugin(): Promise<RemotePushApi | null> {
 	try {
-		const mod = await import("tauri-plugin-remote-push-api");
+		// Keep this optional in web/iframe mode. Avoid static resolution so bundlers
+		// do not fail when the Tauri-only plugin is unavailable.
+		const importer = new Function(
+			"specifier",
+			"return import(specifier)",
+		) as (specifier: string) => Promise<any>;
+		const mod = await importer("tauri-plugin-remote-push-api");
 		return {
 			getToken: mod.getToken,
 			requestPermission: mod.requestPermission,

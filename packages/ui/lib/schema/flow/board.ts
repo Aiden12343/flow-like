@@ -230,3 +230,7 @@ export enum IExecutionMode {
 	Remote = "Remote",
 	Local = "Local",
 }
+
+export type { IGenericCommand } from "./board/commands/generic-command";
+export type { ILog } from "./log";
+export type { ILogMetadata } from "./log-metadata";

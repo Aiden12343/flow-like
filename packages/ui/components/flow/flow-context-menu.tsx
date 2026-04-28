@@ -19,17 +19,17 @@ import { ILayerType } from "../../lib/schema/flow/board";
 import type { IPin } from "../../lib/schema/flow/pin";
 import type { IVariable } from "../../lib/schema/flow/variable";
 import { convertJsonToUint8Array } from "../../lib/uint8";
+import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
 import {
-	Button,
 	Dialog,
 	DialogContent,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	Label,
-} from "../ui";
-import { Checkbox } from "../ui/checkbox";
+} from "../ui/dialog";
 import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 import { ScrollArea } from "../ui/scroll-area";
 import { Separator } from "../ui/separator";
 import { FlowContextMenuNodes } from "./flow-context-menu-nodes";
